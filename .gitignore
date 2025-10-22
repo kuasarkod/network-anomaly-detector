@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+.env
+env/
+venv/
+
+# Poetry
+poetry.lock
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.orig
+
+# Logs
+*.log
+logs/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# Data
+*.sqlite3
+*.db
+*.sqlite
+
+# Docker
+*.pid
+**/postgres-data

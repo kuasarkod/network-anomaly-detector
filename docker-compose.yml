@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: anomaly-detector-api
+    command: uvicorn anomaly_detector.api.main:app --host 0.0.0.0 --port 8080 --reload
+    volumes:
+      - ./src:/app/src
+    env_file:
+      - ./config/.env
+      - ./config/.env.example
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+
+  redis:
+    image: redis:7-alpine
+    container_name: anomaly-detector-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: anomaly-detector-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: anomaly
+      POSTGRES_USER: anomaly
+      POSTGRES_PASSWORD: anomaly
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  dashboard:
+    image: node:20-alpine
+    container_name: anomaly-detector-dashboard
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes:
+      - ./web/dashboard:/app
+    environment:
+      - VITE_API_BASE=http://api:8080
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: anomaly-detector-prometheus
+    env_file:
+      - ./config/.env
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:10.4.4
+    container_name: anomaly-detector-grafana
+    env_file:
+      - ./config/.env
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-supersecuregrafana}
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres-data:
+  grafana-data:
